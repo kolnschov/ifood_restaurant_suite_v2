@@ -1,39 +1,61 @@
+# modules/analytics.py
+from __future__ import annotations
 import pandas as pd
+from typing import Dict
 
-# KPIs básicos do relatório de pedidos
-def kpis_pedidos(df_ped):
-    out = {}
-    out["pedidos_total"] = len(df_ped)
-    if "Valor Total" in df_ped.columns:
-        out["faturamento_bruto"] = df_ped["Valor Total"].sum()
-        out["ticket_medio"] = df_ped["Valor Total"].mean()
-    return pd.DataFrame([out])
 
-# Incentivos (origem: iFood ou loja)
-def incentivos_por_origem(df_ped):
-    if "Incentivo (R$)" not in df_ped.columns:
-        return pd.DataFrame()
-    if "Origem do Incentivo" not in df_ped.columns:
-        return pd.DataFrame()
-    return df_ped.groupby("Origem do Incentivo")["Incentivo (R$)"].sum().reset_index()
+def kpis_basicos(dfs: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """
+    KPIs simplificados: pedidos, ticket médio, % incentivos (se existir coluna),
+    tudo com defesas para DataFrames vazios.
+    """
+    pedidos = dfs.get("pedidos", pd.DataFrame())
+    vendas = dfs.get("vendas", pd.DataFrame())
 
-# Dependência por produto (usando Cardápio/Funil)
-def dependencia_por_produto(df_itens):
-    if "Produto" not in df_itens.columns or "Pedidos com Promoção" not in df_itens.columns:
-        return None, None, None, None
-    
-    df = df_itens.copy()
-    df["%_com_promo"] = df["Pedidos com Promoção"] / df["Pedidos"] * 100
-    top_dep = df.sort_values("%_com_promo", ascending=False).head(10)
-    top_ind = df.sort_values("%_com_promo").head(10)
-    eq = df[(df["%_com_promo"] > 30) & (df["%_com_promo"] < 70)]
-    return df, top_dep, top_ind, eq
+    total_pedidos = len(pedidos) if not pedidos.empty else 0
 
-# Margem líquida aproximada após taxa/custo
-def margem_pos_taxa(preco, custo_receita, modo, taxa_ifood, custo_entrega):
-    if preco <= 0:
-        return 0.0
-    if modo == "Entrega pelo iFood (Logística)":
-        return preco * (1 - taxa_ifood) - custo_receita
-    else:
-        return preco - custo_receita - custo_entrega
+    # ticket médio: se tiver 'valor_bruto' e 'id_pedido'
+    ticket = 0.0
+    if not vendas.empty:
+        col_valor = None
+        for c in vendas.columns:
+            if "valor" in c.lower() and "bruto" in c.lower():
+                col_valor = c
+                break
+        if col_valor:
+            total_venda = vendas[col_valor].fillna(0).sum()
+            qtd = len(vendas)
+            ticket = float(total_venda / qtd) if qtd > 0 else 0.0
+
+    # % incentivos: procura colunas plausíveis
+    incentivo_perc = 0.0
+    if not vendas.empty:
+        valor_col = None
+        desc_col = None
+        for c in vendas.columns:
+            cl = c.lower()
+            if ("valor" in cl and "bruto" in cl) or ("total" in cl and "bruto" in cl):
+                valor_col = c
+            if "desconto" in cl or "cupom" in cl:
+                desc_col = c
+        if valor_col and desc_col:
+            bruto = vendas[valor_col].fillna(0).sum()
+            desc = vendas[desc_col].fillna(0).sum()
+            incentivo_perc = float(desc / bruto) if bruto > 0 else 0.0
+
+    return pd.DataFrame(
+        {
+            "KPI": ["Pedidos", "Ticket médio", "% incentivo em vendas"],
+            "Valor": [total_pedidos, round(ticket, 2), round(incentivo_perc * 100, 2)],
+            "Unidade": ["un", "R$", "%"],
+        }
+    )
+
+
+def produtos_topo(dfs: Dict[str, pd.DataFrame], top_n: int = 10) -> pd.DataFrame:
+    """
+    Retorna top produtos por quantidade em 'vendas' se houver colunas compatíveis.
+    """
+    vendas = dfs.get("vendas", pd.DataFrame())
+    if vendas.empty:
+        return pd.DataFrame(columns=["produto",
