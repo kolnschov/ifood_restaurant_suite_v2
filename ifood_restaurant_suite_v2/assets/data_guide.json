@@ -1,0 +1,25 @@
+{
+  "pedidos": {
+    "nome_relatorio": "Relatório de Pedidos",
+    "onde_encontrar": ["Relatórios", "Pedidos", "Exportar Excel (.xlsx)"]
+  },
+  "conciliacao": {
+    "nome_relatorio": "Relatório de Conciliação",
+    "onde_encontrar": ["Financeiro", "Conciliação", "Exportar Excel (.xlsx)"],
+    "observacao": "Use a aba Detalhe"
+  },
+  "vendas": {
+    "nome_relatorio": "Relatório de Vendas",
+    "onde_encontrar": ["Relatórios", "Desempenho/Vendas", "Exportar Excel (.xlsx)"],
+    "abas_interessantes": ["Horários com mais vendas", "Dias com mais vendas"]
+  },
+  "operacao": {
+    "nome_relatorio": "Relatório de Operação",
+    "onde_encontrar": ["Relatórios", "Operação", "Exportar Excel (.xlsx)"]
+  },
+  "cardapio": {
+    "nome_relatorio": "Relatório de Cardápio/Funil",
+    "onde_encontrar": ["Relatórios", "Cardápio", "Exportar Excel (.xlsx)"],
+    "abas_interessantes": ["Itens", "Funil Loja"]
+  }
+}

@@ -1,0 +1,6 @@
+streamlit==1.37.0
+pandas<2.3
+numpy
+openpyxl
+python-dateutil
+tzdata
