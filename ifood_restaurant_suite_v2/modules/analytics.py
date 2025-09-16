@@ -58,4 +58,25 @@ def produtos_topo(dfs: Dict[str, pd.DataFrame], top_n: int = 10) -> pd.DataFrame
     """
     vendas = dfs.get("vendas", pd.DataFrame())
     if vendas.empty:
-        return pd.DataFrame(columns=["produto",
+        return pd.DataFrame(columns=["produto", "qtd"])
+    # heurística de colunas
+    prod_col = None
+    qtd_col = None
+    for c in vendas.columns:
+        cl = c.lower()
+        if prod_col is None and ("produto" in cl or "item" in cl):
+            prod_col = c
+        if qtd_col is None and ("qtd" in cl or "quantidade" in cl):
+            qtd_col = c
+    if not prod_col or not qtd_col:
+        return pd.DataFrame(columns=["produto", "qtd"])
+
+    df = (
+        vendas[[prod_col, qtd_col]]
+        .rename(columns={prod_col: "produto", qtd_col: "qtd"})
+        .groupby("produto", as_index=False)["qtd"]
+        .sum()
+        .sort_values("qtd", ascending=False)
+        .head(top_n)
+    )
+    return df.reset_index(drop=True)
